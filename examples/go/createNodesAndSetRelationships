@@ -1,0 +1,180 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/dgraph-io/dgo"
+	"github.com/dgraph-io/dgo/protos/api"
+	"google.golang.org/grpc"
+)
+
+// Permission comment
+type Permission struct {
+	UID  string `json:"uid,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// Group comment
+type Group struct {
+	UID         string       `json:"uid,omitempty"`
+	Name        string       `json:"name,omitempty"`
+	Permissions []Permission `json:"permission,omitempty"`
+}
+
+// Person comment
+type Person struct {
+	UID    string  `json:"uid,omitempty"`
+	Name   string  `json:"name,omitempty"`
+	Groups []Group `json:"group,omitempty"`
+}
+
+var client *dgo.Dgraph
+
+func newClient() *dgo.Dgraph {
+	d, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return dgo.NewDgraphClient(
+		api.NewDgraphClient(d),
+	)
+}
+
+func init() {
+	client = newClient()
+}
+
+func createNodes(ctx context.Context, nodes []interface{}) error {
+	var err error
+
+	txn := client.NewTxn()
+	defer txn.Discard(ctx)
+
+	pb, err := json.Marshal(nodes)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.NewTxn().Mutate(ctx, &api.Mutation{SetJson: pb, CommitNow: true})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getByAttribute(ctx context.Context, attribute string, value string) ([]interface{}, error) {
+	q := fmt.Sprintf(`
+		{
+			q(func: eq(%s, %s)) {
+				uid
+				name
+			}
+		}
+		`, attribute, value)
+
+	resp, err := client.NewReadOnlyTxn().Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	type Result struct {
+		Response []interface{} `json:"q"`
+	}
+
+	var r Result
+	err = json.Unmarshal(resp.Json, &r)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Response, nil
+
+}
+
+func setRelationship(ctx context.Context, puid string, relationship string, cuid string) {
+	q := fmt.Sprintf(`
+	{
+		"uid": "%s",
+		"%s": {
+			"uid": "%s"
+		}
+	}`, puid, relationship, cuid)
+
+	resp, err := client.NewTxn().Mutate(ctx, &api.Mutation{SetJson: []byte(q), CommitNow: true})
+
+	log.Println(resp, err)
+}
+
+func createRelationship(ctx context.Context, parent string, relationship string, child string) {
+	parentGroup, err := getByAttribute(ctx, "name", parent)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	childGroup, err := getByAttribute(ctx, "name", child)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, parent := range parentGroup {
+		p := parent.(map[string]interface{})
+
+		for _, child := range childGroup {
+			c := child.(map[string]interface{})
+
+			setRelationship(ctx, p["uid"].(string), relationship, c["uid"].(string))
+
+		}
+	}
+}
+
+func main() {
+	var err error
+	ctx := context.Background()
+
+	// drop all records for a clean slate
+	err = client.Alter(ctx, &api.Operation{DropAll: true})
+	if err != nil {
+		log.Fatalf("Unable to drop all records %+v", err)
+	}
+
+	// Set Schema
+	client.Alter(ctx, &api.Operation{Schema: `
+		name: string @index(exact) .
+	`})
+
+	err = createNodes(ctx, []interface{}{
+		Person{Name: "Steve"},
+		Person{Name: "Sue"},
+		Person{Name: "Mark"},
+		Group{Name: "Admin"},
+		Group{Name: "Reader"},
+		Group{Name: "Writer"},
+		Permission{Name: "Read"},
+		Permission{Name: "Write"},
+		Permission{Name: "Delete"},
+	})
+	if err != nil {
+		log.Fatalf("Error creating nodes")
+	}
+
+	createRelationship(ctx, "Steve", "member_of", "Admin")
+	createRelationship(ctx, "Sue", "member_of", "Writer")
+	createRelationship(ctx, "Sue", "member_of", "Reader")
+	createRelationship(ctx, "Mark", "member_of", "Reader")
+
+	createRelationship(ctx, "Admin", "can", "Read")
+	createRelationship(ctx, "Admin", "can", "Write")
+	createRelationship(ctx, "Admin", "can", "Delete")
+
+	createRelationship(ctx, "Writer", "can", "Write")
+	createRelationship(ctx, "Writer", "can", "Raad")
+
+	createRelationship(ctx, "Reader", "can", "Read")
+
+}

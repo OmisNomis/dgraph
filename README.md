@@ -155,3 +155,13 @@ dgraph examples
   }
 }
 ```
+
+```
+// Multi-condition query
+{
+ q(func: has(name)) @filter((eq(name, "Steve") AND eq(type, "User")) OR eq(type, "Fruit")) @recurse(depth: 5, loop: true) {
+   name
+   type
+ }
+}
+```

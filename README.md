@@ -116,3 +116,42 @@ dgraph examples
   }
 }
 ```
+
+```
+// Check Password
+{
+  q(func: eq(name, "SimonO")){
+    uid
+    password
+    checkpwd(password2, "abc122")
+    can_access @filter(eq(name, "PowerhashWeb")) {
+      name 
+    }
+  }
+}
+```
+
+```
+// Multiple filters
+{
+  q(func: eq(name, "SimonO")) @filter(eq(password, "abc") OR eq(password, "aaa")) {
+    uid
+    can_access @filter(eq(name, "PowerhashWeb")) {
+      name 
+    }
+  }
+}
+```
+
+```
+// Filter on lower-level
+{
+  q(func: eq(name, "SimonO")) {
+    uid
+    can_read @filter(eq(type, "Workergroup")) {
+      name
+      type
+    }
+  }
+}
+```

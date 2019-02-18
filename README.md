@@ -165,3 +165,16 @@ dgraph examples
  }
 }
 ```
+
+```
+// Expand all relationships
+{
+  q(func: has(name)) {
+    expand(_all_) {
+      expand(_all_) {
+        expand(_all_)
+      }
+    }
+  }
+}
+```

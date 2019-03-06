@@ -178,3 +178,12 @@ dgraph examples
   }
 }
 ```
+
+```
+// Filter on edge - Users that are a member_of the specified uid
+{
+  q(func: eq(type, "User")) @filter(uid_in(member_of, 0x2720)) {
+  	username
+  }
+}
+```

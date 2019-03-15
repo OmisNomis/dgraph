@@ -1,0 +1,15 @@
+[Unit]
+Description=dgraph.io data server
+Wants=network.target
+After=network.target dgraph-zero.service
+Requires=dgraph-zero.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dgraph alpha --port_offset 200 --lru_mb 2048 -p /home/ubuntu/dgraph/run/dgraph/p -w /home/ubuntu/dgraph/run/dgraph/w --export home/ubuntu/dgraph/
+StandardOutput=journal
+StandardError=journal
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target

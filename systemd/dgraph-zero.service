@@ -1,0 +1,15 @@
+[Unit]
+Description=dgraph.io zero server
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dgraph zero --wal /home/ubuntu/dgraph/run/dgraph/zw
+StandardOutput=journal
+StandardError=journal
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=dgraph.service

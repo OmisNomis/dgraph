@@ -187,3 +187,23 @@ dgraph examples
   }
 }
 ```
+
+```
+// Query multiple types
+{
+  USER as var(func: has(username))
+  MOB as var(func: has(mobile))
+  EMAIL as var(func: has(email))
+  var(func: uid(USER, MOB, EMAIL)) @recurse {
+    Groups as uid
+    member_of
+  }
+  
+  query(func: uid(USER, MOB, EMAIL, Groups)) {
+    expand(_all_) {
+      name:name
+      type:type
+    }
+  }
+}
+```

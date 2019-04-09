@@ -194,6 +194,7 @@ dgraph examples
   USER as var(func: has(username))
   MOB as var(func: has(mobile))
   EMAIL as var(func: has(email))
+  
   var(func: uid(USER, MOB, EMAIL)) @recurse {
     Groups as uid
     member_of

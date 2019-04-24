@@ -15,3 +15,8 @@ dgraph bulk -r goldendata.rdf.gz -s goldendata.schema --map_shards=4 --reduce_sh
 // Import using Docker
 docker exec -it dgraph_alpha dgraph live -r /dgraph/dgraph.r40013.u0412.1306/g01.rdf.gz --zero=zero:5280 --dgraph=localhost:9280 -c 1
 ```
+
+```
+// Import using Docker - using the -s (schema) flag
+docker exec -it dgraph_alpha dgraph live -r /dgraph/dgraph.r40015.u0415.0938/g01.rdf.gz -s /dgraph/dgraph.r40015.u0415.0938/g01.schema.gz --zero=zero:5280 --dgraph=localhost:9280 -c 1
+```
